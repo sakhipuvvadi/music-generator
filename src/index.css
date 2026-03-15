@@ -1,0 +1,258 @@
+/* ---------- THEME ---------- */
+body.light {
+  background-color: #ffffff;
+  color: #111827;
+}
+
+body.dark {
+  background-color: #111827;
+  color: #f9fafb;
+}
+
+/* ---------- NAVBAR ---------- */
+.navbar {
+  width: 100%;
+  height: 64px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 32px;
+  box-sizing: border-box;
+
+  background-color: inherit;
+  border-bottom: 1px solid #e5e7eb;
+
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.nav-left {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* Center links */
+.nav-links {
+  display: flex;
+  gap: 58px;
+}
+
+.nav-links a {
+  text-decoration: none;
+  font-weight: 800;
+  color: inherit;
+  font-weight: 500;
+  padding-bottom: 4px;
+  transition: color 0.2s ease, border-bottom 0.2s ease;
+}
+
+/* Hover */
+.nav-links a:hover {
+  color: #2563eb;
+}
+
+/* Active link */
+.nav-links a.active {
+  color: #2563eb;
+  border-bottom: 2px solid #2563eb;
+}
+
+/* Right section */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Buttons */
+.theme-btn,
+.login-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.theme-btn:hover,
+.login-btn:hover {
+  background-color: #f3f4f6;
+}
+
+/* Signup button */
+.signup-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: none;
+  background-color: #2563eb;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.signup-btn:hover {
+  background-color: #1d4ed8;
+}
+/* -------- Merger Page -------- */
+.merger-page {
+  display: flex;
+  justify-content: center;
+  padding: 40px 16px;
+}
+
+.merger-card {
+  width: 100%;
+  max-width: 520px;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 32px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.merger-card h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.subtitle {
+  color: #6b7280;
+  margin: 8px 0 24px;
+}
+
+/* Upload box */
+.upload-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.upload-box:hover {
+  border-color: #2563eb;
+  background: #f8fafc;
+}
+
+.upload-box span {
+  color: #374151;
+  font-weight: 500;
+}
+
+/* File list */
+.file-list {
+  margin: 16px 0;
+  padding-left: 18px;
+  color: #374151;
+  font-size: 14px;
+}
+
+/* Primary button */
+.primary-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.primary-btn:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+/* Result section */
+.result {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.download-btn {
+  text-align: center;
+  padding: 10px;
+  border-radius: 8px;
+  background: #10b981;
+  color: white;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.download-btn:hover {
+  background: #059669;
+}
+
+/* -------- Lyrics Page -------- */
+.lyrics-page {
+  display: flex;
+  justify-content: center;
+  padding: 40px 16px;
+}
+
+.lyrics-card {
+  width: 100%;
+  max-width: 600px;
+  background: white;
+  border-radius: 14px;
+  padding: 32px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.lang-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.lang-row label {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.lang-row select {
+  width: 160px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+}
+
+.arrow {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.output {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.output textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  resize: none;
+}
+
+
