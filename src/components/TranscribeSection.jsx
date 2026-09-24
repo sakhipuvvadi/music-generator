@@ -22,10 +22,35 @@ export default function TranscribeSection() {
 
 
   const handleTranscribe = async () => {
-    if (inputType !== "text") {
-      alert("Only text transcription is connected for now");
-      return;
-    }
+    if (inputType === "audio") {
+      if (!audio) {
+        alert("Please upload an audio file");
+        return;
+      }
+      setLoading(true);
+        try {
+    const formData = new FormData();
+    formData.append("file", audio);
+
+    const res = await fetch("http://127.0.0.1:8000/transcribe-audio", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+    setOutput(data.text);
+    setDetectedLang("");
+
+  } catch (err) {
+    alert("Failed to connect to backend");
+    console.error(err);
+  } finally {
+    setLoading(false);   // 🔥 STOP loading AFTER result
+  }
+
+  return;
+}
+
 
     if (!text.trim()) {
       alert("Please enter text");
@@ -124,17 +149,26 @@ export default function TranscribeSection() {
 
 
       {inputType === "audio" && (
-  <label className="upload-box">
-    <input
-      type="file"
-      accept="audio/*"
-      hidden
-      onChange={(e) => setAudio(e.target.files[0])}
-    />
-    <span>{audio ? audio.name : "Upload audio file"}</span>
-  </label>
-)}
+  <>
+    <label className="upload-box">
+      <input
+        type="file"
+        accept="audio/*"
+        hidden
+        onChange={(e) => setAudio(e.target.files[0])}
+      />
+      <span>{audio ? audio.name : "Upload audio file"}</span>
+    </label>
 
+    <textarea
+      className="output-text"
+      placeholder="Transcribed text will appear here"
+      value={output}
+      readOnly
+      style={{ marginTop: "16px" }}
+    />
+  </>
+)}
 
       <button
         className="primary-btn"

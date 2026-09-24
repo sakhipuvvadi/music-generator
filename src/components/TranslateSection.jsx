@@ -19,10 +19,55 @@ export default function TranslateSection() {
   const [detectedLang, setDetectedLang] = useState("");
 
   const handleTranslate = async () => {
-    if (inputType !== "text") {
-      alert("Audio translation not connected yet");
-      return;
-    }
+    if (inputType === "audio") {
+  if (!audio) {
+    alert("Upload audio file");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    // 🔥 STEP 1: Transcribe audio
+    const formData = new FormData();
+    formData.append("file", audio);
+
+    const transcribeRes = await fetch("http://127.0.0.1:8000/transcribe-audio", {
+      method: "POST",
+      body: formData
+    });
+
+    const transcribeData = await transcribeRes.json();
+    const transcribedText = transcribeData.text;
+
+    // 🔥 STEP 2: Translate text
+    const translateRes = await fetch("http://127.0.0.1:8000/translate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        text: transcribedText,
+        fromLang: "auto",
+        toLang: toLang
+      })
+    });
+
+    const translateData = await translateRes.json();
+
+    // 🎯 Final output
+    setOutput(translateData.translation);
+    setDetectedLang(translateData.detected_language);
+
+  } catch (err) {
+    console.error(err);
+    alert("Audio translation failed");
+  } finally {
+    setLoading(false);
+  }
+
+  return;
+}
 
     if (!text.trim()) {
       alert("Enter text");
@@ -80,70 +125,107 @@ export default function TranslateSection() {
         </button>
       </div>
 
-      {/* LANGUAGE BAR */}
-      {inputType === "text" && (
-        <div className="lang-select-bar">
-
-          {/* DETECTED */}
-          <div className="lang-box">
-            <span className="lang-text">
-              {detectedLang
-                ? LANGUAGE_MAP[detectedLang] || detectedLang
-                : "Detect language"}
-            </span>
-          </div>
-
-          {/* ARROW */}
-          <div className="swap-icon">⇄</div>
-
-          {/* TARGET */}
-          <select
-            className="lang-box select-box"
-            value={toLang}
-            onChange={(e)=>setToLang(e.target.value)}
-          >
-            <option value="en">English</option>
-            <option value="hi">Hindi</option>
-            <option value="te">Telugu</option>
-            <option value="ta">Tamil</option>
-          </select>
-
-        </div>
-      )}
-
-      {/* TEXT MODE */}
-      {inputType === "text" && (
-        <div className="text-grid">
-
-          <textarea
-            className="input-text"
-            placeholder="Enter text"
-            value={text}
-            onChange={(e)=>setText(e.target.value)}
-          />
-
-          <textarea
-            className="output-text"
-            placeholder="Translation appears here"
-            value={output}
-            readOnly
-          />
-
-        </div>
-      )}
-
-      {/* AUDIO MODE */}
       {inputType === "audio" && (
-        <label className="upload-box">
-          <input
-            type="file"
-            accept="audio/*"
-            hidden
-            onChange={(e)=>setAudio(e.target.files[0])}
-          />
-          <span>{audio ? audio.name : "Upload audio file"}</span>
-        </label>
-      )}
+  <>
+    {/* 🔥 Language selection for audio */}
+    <div className="lang-select-bar">
+      <div className="lang-box">
+        <span className="lang-text">
+          {detectedLang
+            ? LANGUAGE_MAP[detectedLang] || detectedLang
+            : "Detect language"}
+        </span>
+      </div>
+
+      <div className="swap-icon">⇄</div>
+
+      <select
+        className="lang-box select-box"
+        value={toLang}
+        onChange={(e) => setToLang(e.target.value)}
+      >
+        <option value="en">English</option>
+        <option value="hi">Hindi</option>
+        <option value="te">Telugu</option>
+        <option value="ta">Tamil</option>
+      </select>
+    </div>
+
+    {/* 🔥 Upload box */}
+    <label className="upload-box">
+      <input
+        type="file"
+        accept="audio/*"
+        hidden
+        onChange={(e) => {
+          setAudio(e.target.files[0]);
+          setOutput("");
+        }}
+      />
+      <span>{audio ? audio.name : "Upload audio file"}</span>
+    </label>
+
+    {/* 🔥 Output box */}
+    <textarea
+      className="output-text"
+      placeholder="Translated text will appear here"
+      value={output}
+      readOnly
+      style={{ marginTop: "16px" }}
+    />
+  </>
+)}
+{inputType === "text" && (
+  <div className="text-grid">
+
+    {/* 🔥 LEFT SIDE (INPUT + LANGUAGE) */}
+    <div>
+      <select
+        className="lang-box select-box"
+        value={fromLang}
+        onChange={(e) => setFromLang(e.target.value)}
+      >
+        <option value="auto">Detect language</option>
+        <option value="en">English</option>
+        <option value="hi">Hindi</option>
+        <option value="te">Telugu</option>
+        <option value="ta">Tamil</option>
+      </select>
+
+      <textarea
+        className="input-text"
+        placeholder="Enter text"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        style={{ marginTop: "10px" }}
+      />
+    </div>
+
+    {/* 🔥 RIGHT SIDE (OUTPUT + LANGUAGE) */}
+    <div>
+      <select
+        className="lang-box select-box"
+        value={toLang}
+        onChange={(e) => setToLang(e.target.value)}
+      >
+        <option value="en">English</option>
+        <option value="hi">Hindi</option>
+        <option value="te">Telugu</option>
+        <option value="ta">Tamil</option>
+      </select>
+
+      <textarea
+        className="output-text"
+        placeholder="Translation appears here"
+        value={output}
+        readOnly
+        style={{ marginTop: "10px" }}
+      />
+    </div>
+
+  </div>
+)}
+
 
       {/* BUTTON */}
       <button

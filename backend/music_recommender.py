@@ -66,20 +66,19 @@ REQUIRED JSON FORMAT:
     )
 
     content = response.choices[0].message.content
-
+    print(content)
     result = json.loads(content)
 
     token = get_spotify_token()
-
     for song in result["recommendations"]:
         song["spotify_url"] = get_spotify_link(
             song["title"],
             song["artist"],
             token
         )
-
+        print("Yes",song["spotify_url"])
+    print(result)
     return result
-
 def get_spotify_token():
     client_id = os.getenv("SPOTIFY_CLIENT_ID")
     client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
@@ -100,7 +99,7 @@ def get_spotify_token():
     response = requests.post(url, headers=headers, data=data)
     return response.json()["access_token"]
 def get_spotify_link(title, artist, token):
-    query = f"{title} {artist}"
+    query = f"track:{title} artist:{artist}"   # better query
 
     url = "https://api.spotify.com/v1/search"
 
@@ -115,9 +114,59 @@ def get_spotify_link(title, artist, token):
     }
 
     res = requests.get(url, headers=headers, params=params)
-    data = res.json()
 
-    try:
-        return data["tracks"]["items"][0]["external_urls"]["spotify"]
-    except:
+    print("🔍 Query:", query)
+    print("STATUS:", res.status_code)
+
+    # ✅ CHECK RATE LIMIT
+    if res.status_code == 429:
+        print("🚨 RATE LIMIT HIT")
+        print("Retry after:", res.headers.get("Retry-After"))
+        return "Rate limit exceeded"
+
+    # ✅ CHECK TOKEN ERROR
+    if res.status_code == 401:
+        print("❌ Token expired/invalid")
+        return "Token error"
+
+    # ✅ OTHER ERRORS
+    if res.status_code != 200:
+        print("❌ Spotify Error:", res.text)
         return "Not found"
+
+    # ✅ SAFE JSON PARSE
+    try:
+        data = res.json()
+    except:
+        print("❌ Invalid JSON:", res.text)
+        return "Not found"
+
+    # ✅ SAFE ACCESS
+    items = data.get("tracks", {}).get("items", [])
+
+    if not items:
+        return "Not found"
+
+    return items[0]["external_urls"]["spotify"]
+# def get_spotify_link(title, artist, token):
+#     query = f"Title: {title} Artist: {artist}"
+
+#     url = "https://api.spotify.com/v1/search"
+
+#     headers = {
+#         "Authorization": f"Bearer {token}"
+#     }
+
+#     params = {
+#         "q": query,
+#         "type": "track",
+#         "limit": 1
+#     }
+
+#     res = requests.get(url, headers=headers, params=params)
+#     data = res.json()
+#     print(res)
+#     try:
+#         return data["tracks"]["items"][0]["external_urls"]["spotify"]
+#     except:
+#         return "Not found"

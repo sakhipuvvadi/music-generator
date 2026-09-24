@@ -15,7 +15,18 @@ import base64
 import requests
 from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv
+from fastapi import UploadFile, File
+import shutil
+import whisper
+import imageio_ffmpeg
+import os
+import subprocess
+ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_path)
 
+print("FFmpeg path:", ffmpeg_path)
+os.environ["PATH"] += os.pathsep + os.path.dirname(imageio_ffmpeg.get_ffmpeg_exe())
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 load_dotenv()
 
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
@@ -33,12 +44,20 @@ class TranslateInput(BaseModel):
     text: str
     fromLang: str
     toLang: str
+class LyricsRequest(BaseModel):
+    mood: str
+    genre: str
+    language: str
 
 processor = AutoProcessor.from_pretrained("facebook/musicgen-small")
 model = MusicgenForConditionalGeneration.from_pretrained("facebook/musicgen-small")
 model.to("cpu")
 
 print("Model loaded!")
+
+print("Loading Whisper model...")
+whisper_model = whisper.load_model("base")
+print("Whisper loaded!")
 
 
 
@@ -138,6 +157,73 @@ def phonetic_transliterate(
     }
 from fastapi.responses import StreamingResponse
 import io
+# 🎯 Convert timestamps → SRT
+def create_srt(segments, path="lyrics.srt"):
+    with open(path, "w", encoding="utf-8") as f:
+        for i, seg in enumerate(segments, start=1):
+
+            def format_time(t):
+                h = int(t // 3600)
+                m = int((t % 3600) // 60)
+                s = int(t % 60)
+                ms = int((t - int(t)) * 1000)
+                return f"{h:02}:{m:02}:{s:02},{ms:03}"
+
+            f.write(f"{i}\n")
+            f.write(f"{format_time(seg['start'])} --> {format_time(seg['end'])}\n")
+            f.write(seg["text"] + "\n\n")
+
+
+@app.post("/generate-video")
+async def generate_video(file: UploadFile = File(...)):
+
+    os.makedirs("uploads", exist_ok=True)
+
+    audio_path = f"uploads/{file.filename}"
+
+    # save file
+    with open(audio_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # 🎤 Step 1: Whisper → timed lyrics
+    result = whisper_model.transcribe(audio_path)
+    segments = result["segments"]
+
+    # 📄 Step 2: Create SRT
+    srt_path = "uploads/lyrics.srt"
+    create_srt(segments, srt_path)
+
+    # 🖼️ Step 3: simple background
+    bg_path = "uploads/bg.jpg"
+
+    # create black background if not exists
+    if not os.path.exists(bg_path):
+        from PIL import Image
+        img = Image.new("RGB", (1280, 720), color=(0, 0, 0))
+        img.save(bg_path)
+
+    # 🎬 Step 4: FFmpeg command
+    output_path = "uploads/output.mp4"
+
+    command = [
+        "ffmpeg",
+        "-y",
+        "-loop", "1",
+        "-i", bg_path,
+        "-i", audio_path,
+        "-vf", f"subtitles={srt_path}",
+        "-shortest",
+        "-c:v", "libx264",
+        "-c:a", "aac",
+        output_path
+    ]
+
+    subprocess.run(command, check=True)
+
+    return FileResponse(output_path, media_type="video/mp4", filename="lyrics_video.mp4")
+
+
+
 
 @app.post("/generate-music")
 def generate_music(data: MusicPrompt):
@@ -241,4 +327,91 @@ def spotify_callback(code: str):
     access_token = token_response.json().get("access_token")
 
     return RedirectResponse(f"{FRONTEND_URI}?token={access_token}")
+@app.post("/transcribe-audio")
+async def transcribe_audio(file: UploadFile = File(...)):
 
+    os.makedirs("uploads", exist_ok=True)
+    file_path = f"uploads/{file.filename}"
+
+    with open(file_path, "wb") as buffer:
+        buffer.write(await file.read())
+
+    url = "https://api.groq.com/openai/v1/audio/transcriptions"
+
+    headers = {
+        "Authorization": f"Bearer {os.getenv('GROQ_API_KEY')}"
+    }
+
+    files = {
+        "file": open(file_path, "rb")
+    }
+
+    data = {
+        "model": "whisper-large-v3"
+    }
+
+    response = requests.post(url, headers=headers, files=files, data=data)
+
+    return response.json()
+@app.post("/translate")
+def translate_text(data: TranslateInput):
+
+    text = data.text.strip()
+
+    if data.fromLang == "auto":
+        detected = detect(text)
+    else:
+        detected = data.fromLang
+
+    translated = GoogleTranslator(
+        source=detected,
+        target=data.toLang
+    ).translate(text)
+
+    return {
+        "translation": translated,
+        "detected_language": detected
+    }
+@app.post("/generate-lyrics")
+def generate_lyrics(data: LyricsRequest):
+
+    prompt = f"""
+You are a creative lyrics generator.
+
+TASK:
+Generate song lyrics.
+
+DETAILS:
+- Mood: {data.mood}
+- Genre: {data.genre}
+- Language: {data.language}
+
+RULES:
+- 8 to 10 lines
+- Make it natural and emotional
+- No explanations
+- Only lyrics
+"""
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        temperature=0.8,
+        n=1,   # 🔥 only one output
+        messages=[
+            {
+                "role": "system",
+                "content": "You generate only song lyrics."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    )
+
+    # ✅ safe extraction
+    lyrics = response.choices[0].message.content.strip()
+
+    return {
+        "lyrics": lyrics
+    }
